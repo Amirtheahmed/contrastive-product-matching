@@ -1,9 +1,12 @@
 import requests
+import urllib.request
 from zipfile import ZipFile
 from pathlib import Path
+from tqdm import tqdm
+
 
 DATASETS = [
-    'http://data.dws.informatik.uni-mannheim.de/largescaleproductcorpus/data/v2/repo-download/contrastive-data.zip'
+    'http://data.dws.informatik.uni-mannheim.de/largescaleproductcorpus/data/v2/repo-download/repo-data.zip'
 ]
 
 
@@ -20,19 +23,29 @@ def download_datasets():
         print("Downloading file:%s" % file_name)
 
         # create response object
-        r = requests.get(link, stream=True)
+        #r = requests.get(link, stream=True)
+        response = requests.get(link, stream=True)
+        total_size_in_bytes= int(response.headers.get('content-length', 0))
+        block_size = 1024 #1 Kibibyte
+        progress_bar = tqdm(total=total_size_in_bytes, unit='iB', unit_scale=True)
+        with open(f'../../data/{file_name}', 'wb') as file:
+            for data in response.iter_content(block_size):
+                progress_bar.update(len(data))
+                file.write(data)
+        progress_bar.close()
+        if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
+            print("ERROR, something went wrong")
 
         # download started
-        with open(f'../../data/{file_name}', 'wb') as f:
-            for chunk in r.iter_content(chunk_size=1024 * 1024):
-                if chunk:
-                    f.write(chunk)
+        #with open(f'../../data/{file_name}', 'wb') as f:
+        #    for chunk in progress.bar(r.iter_content(chunk_size=1024 * 1024), expected_size=(total_length/1024) + 1):
+        #        if chunk:
+        #            f.write(chunk)
 
         print("%s downloaded!\n" % file_name)
 
     print("All files downloaded!")
     return
-
 
 def unzip_files():
     for link in DATASETS:
